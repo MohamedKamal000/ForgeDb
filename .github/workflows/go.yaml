@@ -1,0 +1,51 @@
+name: Go CI
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
+  pull_request:
+
+jobs:
+  fmt:
+    name: Format Code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: setup go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: "go.mod"
+          cache: "true"
+
+      - name: run code formatting
+        run: gofmt -w .
+
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: setup go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: "go.mod"
+          cache: "true"
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test -count=1 -timeout=20m -coverprofile=coverage.out  ./...
+        shell: bash
+
+      - name: Coverage summary
+        run: go tool cover -func=coverage.out | tail -1

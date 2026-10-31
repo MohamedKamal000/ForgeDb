@@ -108,7 +108,10 @@ func (tree *BTree) Insert(key, val []byte) error {
 	if tree.root == 0 {
 		root := BPage(make(BPage, BTREE_PAGE_SIZE))
 		root.setHeader(BNODE_LEAF_TYPE, 2)
-		nodeAppendKV(root, 0, 0, nil, nil) // append a dummy node to avoid an edge case at the lookup of an index
+		// append a dummy node to avoid an edge case at the lookup of an index
+		// not sure if this is now fixes the edge case since the tutorial was using a sequential iteration for key search
+		// i do use binary search istead based on node type
+		nodeAppendKV(root, 0, 0, nil, nil)
 		nodeAppendKV(root, 1, 0, key, val)
 
 		tree.root = tree.new(root)
@@ -171,7 +174,7 @@ func nodeDelete(tree *BTree, node BPage, idx uint16, key []byte) BPage {
 		merged := BPage(make([]byte, BTREE_PAGE_SIZE))
 		nodeMerge(merged, sibiling, updated)
 		tree.del(node.getPtr(idx - 1))
-		nodeReplace2Kid(newNode, node, idx, tree.new(merged), merged.getKey(0))
+		nodeReplace2Kid(newNode, node, idx-1, tree.new(merged), merged.getKey(0))
 
 	case mergeDirection > 0:
 		merged := BPage(make([]byte, BTREE_PAGE_SIZE))
@@ -185,7 +188,7 @@ func nodeDelete(tree *BTree, node BPage, idx uint16, key []byte) BPage {
 		nodeReplaceKidN(tree, newNode, node, idx, updated)
 	}
 
- 	return newNode
+	return newNode
 }
 
 func (tree *BTree) Delete(key []byte) (bool, error) {
@@ -224,17 +227,17 @@ func treeGet(tree *BTree, node BPage, key []byte) (BPage, int) {
 	return treeGet(tree, tree.get(node.getPtr(idx)), key)
 }
 
-func (tree *BTree) Get(key []byte) ([]byte, bool, int) {
+func (tree *BTree) Get(key []byte) ([]byte, bool) {
 	if tree.root == 0 {
-		return BPage{}, false, -1
+		return BPage{}, false
 	}
 
 	node, idx := treeGet(tree, tree.get(tree.root), key)
 	if len(node) == 0 {
-		return nil, false, -1
+		return nil, false
 	}
 
-	return node.getVal(uint16(idx)), true, idx
+	return node.getVal(uint16(idx)), true
 }
 
 func fullScan(tree *BTree, node BPage, writer *bufio.Writer) {
